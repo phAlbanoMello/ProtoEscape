@@ -9,7 +9,7 @@ public class ObstacleManager : MonoBehaviour
 
     void Awake()
     {
-        obstacles.Clear(); // evita duplicação se recarregar cena
+        obstacles.Clear();
 
         GameObject[] objs = GameObject.FindGameObjectsWithTag(obstacleTag);
         foreach (GameObject obj in objs)
@@ -24,9 +24,9 @@ public class ObstacleManager : MonoBehaviour
 
     void Update()
     {
-        foreach (var o in obstacles)
+        foreach (var obs in obstacles)
         {
-            o.UpdateBounds(o.transform.position); // atualiza com a própria posição
+            if (obs.isDynamic) { obs.UpdateBounds(obs.transform.position); }
         }
     }
 }

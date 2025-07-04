@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
+using static UnityEngine.Rendering.DebugUI;
 
-[RequireComponent(typeof(SpriteRenderer))]
 public class CustomCollision : MonoBehaviour
 {
     [SerializeField] private Vector2 scaleOffset;
@@ -9,58 +9,32 @@ public class CustomCollision : MonoBehaviour
 
     [Tooltip("Trigger Colliders are not obstacles. They don't block movement")]
     public bool isTrigger;
+    [Tooltip("If true, this object's collision center get's updated every frame")]
+    public bool isDynamic;
 
     [Header("Editor")]
     [SerializeField] private bool previewBounds;
+    public bool Collided { get; private set; }
+
+    public event Action OnCollision;
 
     private Bounds collisionBounds;
-
-    public bool Collided { get; private set; }
-    public event Action OnCollision;
 
     public Bounds GetBounds() => collisionBounds;
 
     private void Awake()
     {
-        collisionBounds = CalculateBounds(transform.position);
+        UpdateBounds(transform.position);
     }
 
-    private Bounds CalculateBounds(Vector2 center)
-    {
-        SpriteRenderer sr = GetComponent<SpriteRenderer>();
-        Vector3 size = sr.bounds.size + (Vector3)scaleOffset;
-        Vector3 offset = (Vector3)positionOffset;
-        return new Bounds(center + (Vector2)offset, size);
-    }
-
-    public void UpdateBounds(Vector2 position)
+    public void UpdateBounds(Vector3 position)
     {
         collisionBounds = CalculateBounds(position);
     }
 
-    /// <summary>
-    /// Returns true if movement is valid (no collision).
-    /// </summary>
-    public bool ValidateMovement(Vector2 nextPosition)
+    private Bounds CalculateBounds(Vector3 position)
     {
-        Collided = false;
-
-        Bounds nextBounds = CalculateBounds(nextPosition);
-
-        foreach (CustomCollision other in ObstacleManager.obstacles)
-        {
-            if (other == this) continue; // ignora colisão com si mesmo
-            if (other.isTrigger) continue; // triggers não bloqueiam
-
-            if (nextBounds.Intersects(other.GetBounds()))
-            {
-                Collided = true;
-                OnCollision?.Invoke();
-                return false;
-            }
-        }
-
-        return true;
+        return new Bounds(position + (Vector3)positionOffset, (Vector3)scaleOffset);
     }
 
     public bool IsCollidingWith(CustomCollision other)
@@ -68,6 +42,31 @@ public class CustomCollision : MonoBehaviour
         return collisionBounds.Intersects(other.GetBounds());
     }
 
+    /// <summary>
+    /// Returns true if movement is valid (no collision).
+    /// </summary>
+    public bool CheckForCollision(Vector2 nextPosition)
+    {
+        Collided = false;
+
+        Bounds nextBounds = CalculateBounds(nextPosition);
+
+        foreach (CustomCollision other in ObstacleManager.obstacles)
+        {
+            if (other == this) continue; 
+            if (other.isTrigger) continue;
+
+            if (nextBounds.Intersects(other.GetBounds()))
+            {
+                Collided = true;
+                OnCollision?.Invoke();
+                return Collided;
+            }
+        }
+
+        return Collided;
+    }
+   
     private void OnDrawGizmosSelected()
     {
         if (!previewBounds) return;
